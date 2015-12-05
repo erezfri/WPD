@@ -18,7 +18,6 @@ import android.view.View;
 
 import android.view.WindowManager;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -27,9 +26,11 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
+
     //timer
     private Handler mHandler = new Handler();
     private long startTime;
@@ -37,18 +38,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private long elapsedTime;
     private final int REFRESH_RATE = 100;
     private String hours,minutes,seconds,milliseconds;
-    private long secs,mins,hrs,msecs;
+    private long secs,mins,hrs;
     private boolean stopped = true;
     private Runnable startTimer;
+    private Runnable startSensorDetection;
+    private Handler sensorHandler = new Handler();
 
     //public boolean waitToStart;
     public enum ControlMessage {start};
     public int startMessage=-1;
 
     //Sensor Experiment info variables
-    public int[] mSenorTypeGroup;
+    public int[] mySensor;
     public boolean mTime;
-    public int mSensorNum;//=mSenorTypeGroup.length;
+    public int mSensorNum=1;//=mSenorTypeGroup.length;
     private boolean mDefaultSensor;
 
 
@@ -61,8 +64,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 mHandler.postDelayed(this,REFRESH_RATE);
             }
         };
+        startSensorDetection = new Runnable() {
+            public void run() {
+
+                SetStart();
+                mAcquisitionFlag = true;
+                registerSensorListener();
+                sensorHandler.postDelayed(this,REFRESH_RATE);
+            }
+        };
+
         //Sensor Experiment info variables
-        mSenorTypeGroup=new int[]{Sensor.TYPE_ACCELEROMETER};
+        mySensor=new int[]{Sensor.TYPE_ACCELEROMETER};
         mDefaultSensor=false;
         sensorDelay= SensorManager.SENSOR_DELAY_FASTEST;
         //Packet variables
@@ -98,8 +111,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public ArrayList<FileWriter> mFileWriterGroup;
     private String sampleName = "";
 
+    TextView sensorType;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Packets = new ArrayList<byte[]>();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Button stopButton = (Button)findViewById(R.id.stopButton);
@@ -110,7 +126,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mSensorManager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
 
         mSensorGroup = getSensors(mSensorManager);
-
+        sensorType = (TextView)findViewById(R.id.txtSensorType);
+        sensorType.setText("Accelerometer Sensor is ready");
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
     /**
@@ -124,13 +141,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (mDefaultSensor){
             //Get SensorManager and sensors
             for (int i=0;i<mSensorNum;i++){
-                sensorGroup.add(sensorManager.getDefaultSensor(mSenorTypeGroup[i]));
+                sensorGroup.add(sensorManager.getDefaultSensor(mySensor[i]));
             }
         }
         else{
             //take Android open source sensors
             for (int i=0;i<mSensorNum;i++){
-                List<Sensor> sensorList = sensorManager.getSensorList(mSenorTypeGroup[i]);
+                List<Sensor> sensorList = sensorManager.getSensorList(mySensor[i]);
                 for (Sensor sensor:sensorList){
                     if(sensor.getVendor().contains("Google Inc.")){
                         sensorGroup.add(sensor);
@@ -142,7 +159,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (sensorGroup.size()==0)
         {
             for (int i=0;i<mSensorNum;i++){
-                sensorGroup.add(sensorManager.getDefaultSensor(mSenorTypeGroup[i]));
+                sensorGroup.add(sensorManager.getDefaultSensor(mySensor[i]));
             }
         }
 
@@ -178,14 +195,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
         mHandler.removeCallbacks(startTimer);
         mHandler.postDelayed(startTimer, 0);
+        Calendar c = Calendar.getInstance();
+        sampleName =  "sample_" + c.getTime().toString();
         try{
-            sendMessage("START_SENSORNUM=" + mSensorNum + "@");
-            mSensorManager.unregisterListener((SensorEventListener)mActivity);
-            Packets = new ArrayList<byte[]>();
-            SetStart();
-            mAcquisitionFlag = true;
-            registerSensorListener();
-            //write(getControlMessage(ControlMessage.start));
+            sensorHandler.removeCallbacks(startSensorDetection);
+            sensorHandler.postDelayed(startSensorDetection, 0);
+
+
+
+//            sendMessage("START_SENSORNUM=" + mSensorNum + "@");
+//            mSensorManager.unregisterListener((SensorEventListener)mActivity);
+//            Packets = new ArrayList<byte[]>();
+//            SetStart();
+//            mAcquisitionFlag = true;
+//            registerSensorListener();
+//            //write(getControlMessage(ControlMessage.start));
 
         }
         catch (Exception e){}
@@ -196,7 +220,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         startTime2=Long.MIN_VALUE;
         // initilize packet
         mPacket=ByteBuffer.allocate(4*mSensorNum+mTotSampNum*mSampByteNum);
-        SetPosition();
+        //SetPosition();
     }
     private void SetPosition(){
         mPosition=new int[mSensorNum];
@@ -213,13 +237,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
     public void stopClick(View view){
         try{
-            sendMessage("STOP");
+            //sendMessage("STOP");
             mSensorManager.unregisterListener((SensorEventListener)mActivity);
+            String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/WPD/";
+            File dir = new File(path);
+            if(!dir.exists())
+                dir.mkdirs();
+            CreateFile(sampleName + ".csv");
+            Packets2File(Packets);
 
-        }catch (Exception e){}
+        } catch (Exception e){}
         hideStopButton();
         mHandler.removeCallbacks(startTimer);
-        ((TextView)findViewById(R.id.counterText)).setText("00:00:00");
+        sensorHandler.removeCallbacks(startSensorDetection);
+        ((TextView) findViewById(R.id.counterText)).setText("00:00:00");
         stopped = false;
 
 
@@ -278,44 +309,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         //  ((TextView)findViewById(R.id.timerMs)).setText("." + milliseconds);
     }
 
-    private void sendMessage(String message) {
-        // Check that we're actually connected before trying anything
-//        if (mBTService.getState() != BluetoothService.STATE_CONNECTED) {
-//            Toast.makeText(this, "Not Connected", Toast.LENGTH_SHORT).show();
-//            //connectDevice();
-//            return;
-//        }
-
-        // Check that there's actually something to send
-        if (message.length() > 0) {
-            // Get the message bytes and tell the BluetoothChatService to write
-            byte[] send = message.getBytes();
-            //mBTService.write(send);
-
-        }
-    }
     @Override
     public void onSensorChanged(SensorEvent event) {
-        // Check that we're actually connected before trying anything
-//        if (mBTService.getState() != BluetoothService.STATE_CONNECTED) {
-//            return;
-//        }
-
         // Create the message bytes and send via BluetoothChatService
         // Send message and plot at the SAME PHASE
-        boolean tosendFlag = PacketAdd(event);
-        if(tosendFlag) {
-            SetPosition();
-            for (int i = 0; i<mSensorNum; i++) {
-                String SampCountPosMessage = "SampCountPos[" + i + "]=" + mSampCountPos[i] + "@";
-                //mBTService.write(SampCountPosMessage.getBytes());
-                sendMessage(SampCountPosMessage);
-            }
-            //mBTService.write(message);
             Packets.add(message);
-
-        }
-
     }
 
     @Override
@@ -328,13 +326,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         boolean flag = false;
 // get sensor index
         for(i=0;i<mSensorNum;i++){
-            if(event.sensor.getType()==mSenorTypeGroup[i]) break;
+            if(event.sensor.getType()==mySensor[i]) break;
         }
         mCurSensor=i;
 // get value to put at the Packet buffer
-        float axisX = event.values[0];
         float axisY = event.values[1];
-        float axisZ = event.values[2];
         //float omegaMagnitude = (float)Math.sqrt(axisX*axisX + axisY*axisY + axisZ*axisZ); //TODO change to y only!!
         float omegaMagnitude = axisY;
 
@@ -397,7 +393,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     //FROM THE MONITOR
 
     public void CreateFile(String filename){
-        //if(D_SAMPLE2FILE){
         String state = Environment.getExternalStorageState();
         if (!(state.equals(Environment.MEDIA_MOUNTED))) {
             Toast.makeText(this ,"Media is not mounted" ,Toast.LENGTH_SHORT).show();
@@ -407,11 +402,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mFileWriterGroup= new ArrayList<FileWriter>();
 
         //create files and it's writers
-        //File path2 = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
         String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/WPD";
         try{
             File file = new File(path, filename);
-            mFileGroup.add(file);
+            //mFileGroup.add(file);
             if (file.exists()){
                 file.delete();
             }
@@ -419,14 +413,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             mFileGroup.add(file);
             mFileWriterGroup.add(new FileWriter(file));
             //put file tables titles
-            for (int i=0;i<mSensorNum;i++){
-                FileWriter filewriter = mFileWriterGroup.get(i);
 
-                filewriter.append("time[sec]");
-                filewriter.append(',');
-                filewriter.append("value,");
-                filewriter.append('\n');
-            }
+            FileWriter filewriter = mFileWriterGroup.get(0);
+
+            filewriter.append("time[sec]");
+            filewriter.append(',');
+            filewriter.append("value,");
+            filewriter.append('\n');
+
         }
         catch(IOException e)
         {
@@ -448,7 +442,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 Packet.position(mSampCountPos[i]);
 
                 //write to files
-                long x=Packet.getInt();
+                //long x=Packet.getInt();
                 long samplesNum=100;
                 try{
                     for (long n=0;n<samplesNum;n++){
