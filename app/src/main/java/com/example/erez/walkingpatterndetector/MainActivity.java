@@ -44,6 +44,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Runnable startSensorDetection;
     private Handler sensorHandler = new Handler();
 
+    Boolean firstTimeInPacketAdd = true;
+    float timeDiff = 0;
+
+    public static boolean D_MULTI_SENSOR_FILE;
+
     //public boolean waitToStart;
     public enum ControlMessage {start};
     public int startMessage=-1;
@@ -64,15 +69,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 mHandler.postDelayed(this,REFRESH_RATE);
             }
         };
-        startSensorDetection = new Runnable() {
-            public void run() {
 
-                SetStart();
-                mAcquisitionFlag = true;
-                registerSensorListener();
-                sensorHandler.postDelayed(this,REFRESH_RATE);
-            }
-        };
 
         //Sensor Experiment info variables
         mySensor=new int[]{Sensor.TYPE_ACCELEROMETER};
@@ -80,6 +77,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         sensorDelay= SensorManager.SENSOR_DELAY_FASTEST;
         //Packet variables
         mTotSampNum=100;
+
+        mSampByteNum=mTime ? 4+4:4; //if time change to 4 change GraphAddData val
+
+        mSensorMaxSamp = new int[mSensorNum]; for(int i=0;i<mSensorNum;i++){mSensorMaxSamp[i]
+                =mTotSampNum/mSensorNum;}
+        SetPosition();
     }
 
     //sensor
@@ -107,8 +110,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private ArrayList<byte[]> Packets;
 
     //FILES
-    public ArrayList<File> mFileGroup;
-    public ArrayList<FileWriter> mFileWriterGroup;
+    FileWriter filewriter;
     private String sampleName = "";
 
     TextView sensorType;
@@ -129,6 +131,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         sensorType = (TextView)findViewById(R.id.txtSensorType);
         sensorType.setText("Accelerometer Sensor is ready");
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        startSensorDetection = new Runnable() {
+            public void run() {
+                Packets = new ArrayList<byte[]>();
+                SetStart();
+                mAcquisitionFlag = true;
+                registerSensorListener();
+                sensorHandler.postDelayed(this,REFRESH_RATE);
+            }
+        };
     }
     /**
      * getSensors gets the multi-sensor specific sensor.
@@ -197,31 +209,43 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mHandler.postDelayed(startTimer, 0);
         Calendar c = Calendar.getInstance();
         sampleName =  "sample_" + c.getTime().toString();
+        CreateFile(sampleName + ".csv");
+        sensorHandler.removeCallbacks(startSensorDetection);
+        sensorHandler.postDelayed(startSensorDetection, 0);
+
+    }
+
+    public void stopClick(View view){
         try{
-            sensorHandler.removeCallbacks(startSensorDetection);
-            sensorHandler.postDelayed(startSensorDetection, 0);
+            mSensorManager.unregisterListener((SensorEventListener) mActivity);
+        } catch (Exception e){}
 
+        String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/WPD/";
+        File dir = new File(path);
+        if(!dir.exists())
+            dir.mkdirs();
 
-
-//            sendMessage("START_SENSORNUM=" + mSensorNum + "@");
-//            mSensorManager.unregisterListener((SensorEventListener)mActivity);
-//            Packets = new ArrayList<byte[]>();
-//            SetStart();
-//            mAcquisitionFlag = true;
-//            registerSensorListener();
-//            //write(getControlMessage(ControlMessage.start));
-
+        //Packets2File(Packets);
+        try {
+            filewriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        catch (Exception e){}
-
+        hideStopButton();
+        mHandler.removeCallbacks(startTimer);
+        sensorHandler.removeCallbacks(startSensorDetection);
+        ((TextView) findViewById(R.id.counterText)).setText("00:00:00");
+        stopped = false;
     }
     public void SetStart(){
         //set time
         startTime2=Long.MIN_VALUE;
         // initilize packet
         mPacket=ByteBuffer.allocate(4*mSensorNum+mTotSampNum*mSampByteNum);
-        //SetPosition();
+        SetPosition();
     }
+
+
     private void SetPosition(){
         mPosition=new int[mSensorNum];
         mSampCountPos=new int[mSensorNum];
@@ -235,26 +259,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         }
     }
-    public void stopClick(View view){
-        try{
-            //sendMessage("STOP");
-            mSensorManager.unregisterListener((SensorEventListener)mActivity);
-            String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/WPD/";
-            File dir = new File(path);
-            if(!dir.exists())
-                dir.mkdirs();
-            CreateFile(sampleName + ".csv");
-            Packets2File(Packets);
 
-        } catch (Exception e){}
-        hideStopButton();
-        mHandler.removeCallbacks(startTimer);
-        sensorHandler.removeCallbacks(startSensorDetection);
-        ((TextView) findViewById(R.id.counterText)).setText("00:00:00");
-        stopped = false;
-
-
-    }
 
     private void showStopButton(){
         (findViewById(R.id.startButton)).setVisibility(View.INVISIBLE);
@@ -311,9 +316,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        // Create the message bytes and send via BluetoothChatService
-        // Send message and plot at the SAME PHASE
+        boolean tosendFlag = false;
+        try {
+            tosendFlag = PacketAdd(event);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        if(tosendFlag) {
+            SetPosition();
             Packets.add(message);
+        }
+
     }
 
     @Override
@@ -321,49 +334,58 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
-    public boolean PacketAdd(SensorEvent event){
+    public boolean PacketAdd(SensorEvent event) throws IOException {
         int i;
         boolean flag = false;
-// get sensor index
+        // get sensor index
         for(i=0;i<mSensorNum;i++){
             if(event.sensor.getType()==mySensor[i]) break;
         }
         mCurSensor=i;
-// get value to put at the Packet buffer
+        // get value to put at the Packet buffer
         float axisY = event.values[1];
-        //float omegaMagnitude = (float)Math.sqrt(axisX*axisX + axisY*axisY + axisZ*axisZ); //TODO change to y only!!
-        float omegaMagnitude = axisY;
+        float walkingSample = axisY;
+        mCurVal=walkingSample;
 
-        mCurVal=omegaMagnitude;
-        /*if(mModify[i]){
-            mCurVal=ModifySensorVal(mSenorTypeGroup[i],mCurVal);
-        }*/
-// put sample at the Packet buffer and update buffer.
+        // put sample at the Packet buffer and update buffer.
         mPacket.position(mPosition[i]);
-        if(mTime) {
-//mPacket.putLong(event.timestamp);
+        if(true) {
+            //mPacket.putLong(event.timestamp);
             if(startTime==Long.MIN_VALUE){
                 startTime=event.timestamp;
                 firstTimeDif = startTime;
             }
             mCurTime = (float)(1e-9*(event.timestamp-startTime));
+            if (firstTimeInPacketAdd){
+                timeDiff = mCurTime;
+                firstTimeInPacketAdd = false;
+            }
             mPacket.putFloat(mCurTime);
-
+            //filewriter.append((char) mCurTime);
         }
-        mPacket.putFloat(mCurVal);
+
+        String timeStr = Float.toString(mCurTime-timeDiff);
+        filewriter.append(timeStr);
+        filewriter.append(',');
+        //mPacket.putFloat(mCurVal);
+        String value = Float.toString(mCurVal);
+        filewriter.append(value);
+        filewriter.append('\n');
+
         mPosition[i]=mPosition[i]+mSampByteNum;
         mSampCount[i]++;
 
-// if the sub‐buffer is full then sending packet
+        // if the sub‐buffer is full then sending packet
         if (mSampCount[i]==mSensorMaxSamp[i]){
             for(int j=0;j<mSensorNum;j++){
                 mPacket.position(mSampCountPos[j]);
                 mPacket.putInt(mSampCount[j]);
             }
             message=mPacket.array();
-//allocate new buffer ‐ otherwise data will be override and won't be available for files
-//            if (D_MULTI_SENSOR_FILE)
-//                mPacket=ByteBuffer.allocate(4*mSensorNum+mTotSampNum*mSampByteNum);
+                //allocate new buffer ‐ otherwise data will be override and won't be available for file
+                if (D_MULTI_SENSOR_FILE) {
+                    mPacket = ByteBuffer.allocate(4 * mSensorNum + mTotSampNum * mSampByteNum);
+                }
             //SetPosition();
             flag = true;
             return true;
@@ -386,10 +408,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return message;
 
     }
-
-
-
-
     //FROM THE MONITOR
 
     public void CreateFile(String filename){
@@ -398,24 +416,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Toast.makeText(this ,"Media is not mounted" ,Toast.LENGTH_SHORT).show();
             finish();
         }
-        mFileGroup =new ArrayList<File>();
-        mFileWriterGroup= new ArrayList<FileWriter>();
-
-        //create files and it's writers
         String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/WPD";
         try{
             File file = new File(path, filename);
-            //mFileGroup.add(file);
             if (file.exists()){
                 file.delete();
             }
             file.createNewFile();
-            mFileGroup.add(file);
-            mFileWriterGroup.add(new FileWriter(file));
             //put file tables titles
-
-            FileWriter filewriter = mFileWriterGroup.get(0);
-
+            filewriter = new FileWriter(file);
             filewriter.append("time[sec]");
             filewriter.append(',');
             filewriter.append("value,");
@@ -434,15 +443,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         for (byte[] p: Packets){
             ByteBuffer Packet = ByteBuffer.wrap(p);//for each packet
             //  at the packet - for each sensor i
-
-            for(int i=0;i<mSensorNum;i++){
-                //get appropriate filewriter
-                FileWriter filewriter = mFileWriterGroup.get(i);
                 //set position to the start of the sensor i message
-                Packet.position(mSampCountPos[i]);
+                Packet.position(mSampCountPos[0]);
 
                 //write to files
-                //long x=Packet.getInt();
+                long x=Packet.getInt();
                 long samplesNum=100;
                 try{
                     for (long n=0;n<samplesNum;n++){
@@ -460,12 +465,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 catch (Exception e) {
                     e.printStackTrace();
                 }
-            }
-        }
 
+        }
         //close files
         for(int i=0;i<mSensorNum;i++){
-            FileWriter filewriter = mFileWriterGroup.get(i);
             try{
                 filewriter.close();
             }
@@ -474,105 +477,4 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         }
     }
-
-    // The Handler that gets information back from the BluetoothService
-        private final Handler myHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-//            switch (msg.what) {
-//                case BluetoothService.MESSAGE_STATE_CHANGE:
-//                    switch (msg.arg1) {
-//                        case BluetoothService.STATE_CONNECTED:
-//                            break;
-//                        case BluetoothService.STATE_CONNECTING:
-//                            break;
-//                        case BluetoothService.STATE_LISTEN:
-//                        case BluetoothService.STATE_NONE:
-//                            break;
-//                    }
-//                    break;
-//                case BluetoothService.MESSAGE_WRITE:
-//                    //byte[] writeBuf = (byte[]) msg.obj;
-//                    // construct a string from the buffer
-//                    // String writeMessage = new String(writeBuf);
-//                    break;
-//                case BluetoothService.MESSAGE_READ:
-//
-//
-//                    byte[] readBuf = (byte[]) msg.obj;
-//                    String msgString = new String(readBuf);
-//                    if (msgString.startsWith("START"))
-//                    {
-//                        recordingStatus = true;
-//                        TextView t = (TextView)findViewById(R.id.recordingStatus);
-//                        handleStartStop();
-//                        t.setVisibility(View.VISIBLE);//RECORDING...
-//                        Toast.makeText(getApplicationContext(),"The video started", Toast.LENGTH_SHORT).show();
-//                        int indexStart = msgString.indexOf("=") + 1;
-//                        int indexEnd = msgString.indexOf("@");
-//                        mSensorNum = Integer.parseInt(msgString.substring(indexStart, indexEnd));
-//                        mSampCountPos=new int[mSensorNum];
-//                        mSampCountPosFlag = false;
-//                        for (int i=0;i<mSensorNum;i++){if (mGraphControlInd[i]!=-1) mGraphControlNum++;}
-//                        Plot();
-//
-//                    }
-//                    else if (msgString.startsWith("STOP")){
-//                        recordingStatus = false;
-//                        mGraphControlNum = 0;
-//                        TextView t = (TextView)findViewById(R.id.recordingStatus);
-//                        handleStartStop();
-//                        t.setVisibility(View.INVISIBLE);
-//                        Toast.makeText(getApplicationContext(),"The video stopped, please wait", Toast.LENGTH_SHORT).show();
-//                        graphPreview = (LinearLayout) findViewById(R.id.graph_preview);
-//                        graphPreview.setVisibility(View.INVISIBLE);
-//
-//
-//                        //file:
-//                        CreateFile(sampleName + ".csv");
-//                        Packets2File(Packets);
-//                        System.gc();
-//
-//                        //make frames
-//                        new Thread(new Runnable() {
-//                            @Override
-//                            public void run()
-//                            {
-//                                movieToFrames();
-//                                System.gc();
-//
-//                            }
-//                        }).start();
-//                        Toast.makeText(getApplicationContext(),"Done", Toast.LENGTH_SHORT).show();
-//                    }
-//                    else if (msgString.startsWith("SampCountPos") && recordingStatus) {
-//
-//                        int indexStartI = msgString.indexOf("[") + 1;
-//                        int indexEndI = msgString.indexOf("]");
-//                        int indexStartVal = msgString.indexOf("=") + 1;
-//                        int indexEndVal = msgString.indexOf("@");
-//                        mSampCountPos[Integer.parseInt(msgString.substring(indexStartI, indexEndI))] =
-//                                Integer.parseInt(msgString.substring(indexStartVal, indexEndVal));
-//                        mSampCountPosFlag = true;
-//                    }
-//                    else if (recordingStatus && mSampCountPosFlag){   //packets
-//                        Packets.add(readBuf.clone());
-//                        GraphAddData(readBuf, mGraph);
-//                        mGraph.invalidate();
-//                    }
-//
-//                    break;
-//                case BluetoothService.MESSAGE_DEVICE_NAME:
-//                    // save the connected device's name
-//                    mConnectedDeviceName = msg.getData().getString(BluetoothService.DEVICE_NAME);
-//                    Toast.makeText(getApplicationContext(), "Connected to "
-//                            + mConnectedDeviceName, Toast.LENGTH_SHORT).show();
-//                    break;
-//                case BluetoothService.MESSAGE_TOAST:
-//                    Toast.makeText(getApplicationContext(), msg.getData().getString(BluetoothService.TOAST),
-//                            Toast.LENGTH_SHORT).show();
-//                    break;
-//            }
-        }
-    };
 }
