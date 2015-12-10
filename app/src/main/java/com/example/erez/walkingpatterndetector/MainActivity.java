@@ -280,7 +280,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void startClick(View view) {
         showStopButton();
         if (stopped) {
-            startTime = System.currentTimeMillis() - elapsedTime;
+            startTime = System.currentTimeMillis();// - elapsedTime;
         } else {
             startTime = System.currentTimeMillis();
         }
@@ -335,6 +335,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         builder.setNegativeButton("NO", null);
         builder.create();
         builder.show();
+        firstTimeInPacketAdd = true;
 
     }
 
@@ -536,14 +537,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         final String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/WPD/";
         File dir = new File(path);
         if (!dir.exists()) {
-            Boolean returnValue = dir.mkdirs();
-            if (returnValue == true){
-                int x = 5;
-                x++;
-            }
-            else{
-                int x = 20;
-            }
+            dir.mkdirs();
         }
         try {
             File file = new File(path, filename);
