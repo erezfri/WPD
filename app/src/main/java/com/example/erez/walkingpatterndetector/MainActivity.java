@@ -1,5 +1,6 @@
 package com.example.erez.walkingpatterndetector;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -21,6 +22,8 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 
 import android.view.View;
@@ -211,6 +214,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
+
+        if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE) !=
+                PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 112);
+            return;
+        }
     }
 
     /**
@@ -290,11 +299,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             mSensorManager.unregisterListener((SensorEventListener) mActivity);
         } catch (Exception e) {
         }
-
         final String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/WPD/";
-        File dir = new File(path);
-        if (!dir.exists())
-            dir.mkdirs();
 
         //Packets2File(Packets);
         try {
@@ -504,15 +509,42 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return message;
 
     }
-    //FROM THE MONITOR
 
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 112) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                //permission granted  start reading
+            } else {
+                Toast.makeText(this, "No permission to read external storage.", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    //FROM THE MONITOR
     public void CreateFile(String filename) {
         String state = Environment.getExternalStorageState();
         if (!(state.equals(Environment.MEDIA_MOUNTED))) {
             Toast.makeText(this, "Media is not mounted", Toast.LENGTH_SHORT).show();
             finish();
         }
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/WPD";
+
+
+        final String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/WPD/";
+        File dir = new File(path);
+        if (!dir.exists()) {
+            Boolean returnValue = dir.mkdirs();
+            if (returnValue == true){
+                int x = 5;
+                x++;
+            }
+            else{
+                int x = 20;
+            }
+        }
         try {
             File file = new File(path, filename);
             if (file.exists()) {
