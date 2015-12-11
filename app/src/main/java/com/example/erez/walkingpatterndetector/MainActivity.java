@@ -3,14 +3,10 @@ package com.example.erez.walkingpatterndetector;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
-import android.app.DialogFragment;
-import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -20,8 +16,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.Message;
-
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -110,14 +104,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         AppIndex.AppIndexApi.end(client, viewAction);
         client.disconnect();
     }
-
-    //public boolean waitToStart;
-    public enum ControlMessage {
-        start
-    }
-
-    ;
-    public int startMessage = -1;
 
     //Sensor Experiment info variables
     public int[] mySensor;
@@ -500,19 +486,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
-    public byte[] getControlMessage(ControlMessage messagetype) {
-        byte[] message = new byte[4];
-
-        switch (messagetype) {
-            case start:
-                message = ByteBuffer.allocate(4).putInt(startMessage).array();
-        }
-        return message;
-
-    }
-
-
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -555,44 +528,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         } catch (IOException e) {
             //Toast.makeText(activity, e.getMessage() ,Toast.LENGTH_SHORT).show();
             e.printStackTrace();
-        }
-    }
-
-    public void Packets2File(ArrayList<byte[]> Packets) {
-        float startTime = Float.MAX_VALUE;
-        for (byte[] p : Packets) {
-            ByteBuffer Packet = ByteBuffer.wrap(p);//for each packet
-            //  at the packet - for each sensor i
-            //set position to the start of the sensor i message
-            Packet.position(mSampCountPos[0]);
-
-            //write to files
-            long x = Packet.getInt();
-            long samplesNum = 100;
-            try {
-                for (long n = 0; n < samplesNum; n++) {
-                    float timeFloat = Packet.getFloat();
-                    if (timeFloat < startTime) startTime = timeFloat;
-                    timeFloat = timeFloat - startTime;
-                    String timeStr = Float.toString(timeFloat);
-                    filewriter.append(timeStr);
-                    filewriter.append(',');
-                    String value = Float.toString(Packet.getFloat());
-                    filewriter.append(value);
-                    filewriter.append('\n');
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-        }
-        //close files
-        for (int i = 0; i < mSensorNum; i++) {
-            try {
-                filewriter.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
     }
 }
