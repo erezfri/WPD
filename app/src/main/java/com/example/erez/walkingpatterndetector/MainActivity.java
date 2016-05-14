@@ -3,6 +3,7 @@ package com.example.erez.walkingpatterndetector;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -19,7 +20,6 @@ import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
-
 import android.view.View;
 
 import android.view.WindowManager;
@@ -38,6 +38,9 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
@@ -114,19 +117,22 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     //timer
     public MainActivity() {
+
         startTimer = new Runnable() {
             public void run() {
                 elapsedTime = System.currentTimeMillis() - startTime;
                 updateTimer(elapsedTime);
                 mHandler.postDelayed(this, REFRESH_RATE);
+
             }
         };
+        // submit task to threadpool:
 
 
         //Sensor Experiment info variables
         mySensor = new int[]{Sensor.TYPE_ACCELEROMETER};
         mDefaultSensor = false;
-        sensorDelay = SensorManager.SENSOR_DELAY_FASTEST;
+        //sensorDelay = SensorManager.SENSOR_DELAY_GAME;
         //Packet variables
         mTotSampNum = 100;
 
@@ -144,7 +150,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private ArrayList<Sensor> mSensorGroup = new ArrayList<Sensor>(mSensorNum);
     private boolean mAcquisitionFlag = false;
     private SensorManager mSensorManager;
-    public static int sensorDelay = SensorManager.SENSOR_DELAY_GAME;//default value
+    //public static int sensorDelay = SensorManager.SENSOR_DELAY_GAME;//default value
 
     //Packet variables
     public int mTotSampNum;
@@ -170,6 +176,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     TextView sensorType;
 
+    int rowsCounter;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         context = getApplicationContext();
@@ -179,6 +187,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Button stopButton = (Button) findViewById(R.id.stopButton);
         stopButton.setVisibility(View.GONE);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+
+
 
         //Get SensorManager and sensors
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -258,12 +268,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void registerSensorListener() {
         // register to SensorEventListener
         for (int i = 0; i < mSensorNum; i++) {
-            mSensorManager.registerListener(this, mSensorGroup.get(i), sensorDelay);
+            mSensorManager.registerListener(this, mSensorGroup.get(i), 30000); //30000 because it will get us 30 samples in 1 seconds
         }
 
     }
 
     public void startClick(View view) {
+        rowsCounter=0;
         showStopButton();
         if (stopped) {
             startTime = System.currentTimeMillis();// - elapsedTime;
@@ -279,6 +290,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         sensorHandler.postDelayed(startSensorDetection, 0);
 
     }
+
 
     public void stopClick(View view) {
         try {
@@ -301,19 +313,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setTitle("Send CSV")
-                .setMessage("Do you want ot send the output to your e-mail?")
+                .setMessage("Do you want to send us the data?")
                 .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         Intent emailIntent = new Intent(Intent.ACTION_SEND);
                         emailIntent.setData(Uri.parse("mailto:"));
                         emailIntent.setType("text/plain");
-                        emailIntent.putExtra(Intent.EXTRA_EMAIL, "");
+                        emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[] {"wpdapp@gmail.com"});//technion123456789
                         emailIntent.putExtra(Intent.EXTRA_SUBJECT, sampleName );
                         Uri uri = Uri.parse("file://" + path + sampleName + ".csv");
                         emailIntent.putExtra(Intent.EXTRA_STREAM, uri);
                         try {
-                            startActivity(Intent.createChooser(emailIntent, "Send mail..."));
-                        } catch (android.content.ActivityNotFoundException ex) {
+                           startActivity(Intent.createChooser(emailIntent, "Send mail..."));
+                            //startService(emailIntent);
+
+                        } catch (ActivityNotFoundException ex) {
                             Toast.makeText(MainActivity.this,
                                     "There is no email client installed.", Toast.LENGTH_SHORT).show();
                         }
@@ -359,7 +373,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         (findViewById(R.id.stopButton)).setVisibility(View.INVISIBLE);
     }
 
-    private void updateTimer(float time) {
+    private void updateTimer(float time){
         secs = (long) (time / 1000);
         mins = (long) ((time / 1000) / 60);
         hrs = (long) (((time / 1000) / 60) / 60);
@@ -381,7 +395,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (mins < 10 && mins > 0) {
             minutes = "0" + minutes;
         }
-            /* Convert the hours to String and format the String */
+        /* Convert the hours to String and format the String */
         hours = String.valueOf(hrs);
         if (hrs == 0) {
             hours = "00";
@@ -461,8 +475,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         filewriter.append(value);
         filewriter.append('\n');
 
+
+
         mPosition[i] = mPosition[i] + mSampByteNum;
         mSampCount[i]++;
+
+
+        rowsCounter++;//for checking whether the maximum rows achieved
+        if (rowsCounter == 19500){//for checking whether the maximum rows achieved (~10 minutes of testing)
+            Button stopButton;
+            stopButton = (Button) findViewById(R.id.stopButton);
+            stopButton.callOnClick();
+        }
 
         // if the sub‐buffer is full then sending packet
         if (mSampCount[i] == mSensorMaxSamp[i]) {
@@ -484,6 +508,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         } else {
             return false;
         }
+
+
     }
 
     @Override
