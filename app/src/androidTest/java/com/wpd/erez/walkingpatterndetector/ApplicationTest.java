@@ -1,4 +1,4 @@
-package com.example.erez.walkingpatterndetector;
+package com.wpd.erez.walkingpatterndetector;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;

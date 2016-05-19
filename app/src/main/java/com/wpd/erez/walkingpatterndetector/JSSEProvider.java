@@ -1,4 +1,4 @@
-package com.example.erez.walkingpatterndetector;
+package com.wpd.erez.walkingpatterndetector;
 
 /**
  * Created by erez on 16/05/2016.

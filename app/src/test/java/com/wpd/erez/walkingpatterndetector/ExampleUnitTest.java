@@ -1,4 +1,4 @@
-package com.example.erez.walkingpatterndetector;
+package com.wpd.erez.walkingpatterndetector;
 
 import org.junit.Test;
 

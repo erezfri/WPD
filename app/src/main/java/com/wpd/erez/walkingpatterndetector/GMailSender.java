@@ -1,17 +1,14 @@
-package com.example.erez.walkingpatterndetector;
+package com.wpd.erez.walkingpatterndetector;
 
 /**
  * Created by erez on 16/05/2016.
  */
 
 import android.content.Context;
-import android.support.design.widget.Snackbar;
-import android.widget.Toast;
 
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.activation.FileDataSource;
-import javax.mail.BodyPart;
 import javax.mail.Message;
 import javax.mail.Multipart;
 import javax.mail.PasswordAuthentication;
@@ -36,7 +33,7 @@ public class GMailSender extends javax.mail.Authenticator {
     private String password;
     private Session session;
     static {
-        Security.addProvider(new com.example.erez.walkingpatterndetector.JSSEProvider());
+        Security.addProvider(new com.wpd.erez.walkingpatterndetector.JSSEProvider());
     }
     Context context;
     public GMailSender(String user, String password) {
