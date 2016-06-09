@@ -1,10 +1,14 @@
 package com.wpd.erez.walkingpatterndetector;
 
 import android.Manifest;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
@@ -13,6 +17,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -20,6 +25,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
 
 import android.view.WindowManager;
@@ -68,16 +74,49 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onStart() {
         super.onStart();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client.connect();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://com.wpd.erez.walkingpatterndetector/http/host/path")
+        );
+        AppIndex.AppIndexApi.start(client, viewAction);
     }
 
     @Override
     public void onStop() {
         super.onStop();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://com.wpd.erez.walkingpatterndetector/http/host/path")
+        );
+        AppIndex.AppIndexApi.end(client, viewAction);
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client.disconnect();
     }
 
     //Sensor Experiment info variables
     public int[] mySensor;
     public boolean mTime;
+
     public int mSensorNum = 1;//=mSenorTypeGroup.length;
     private boolean mDefaultSensor;
 
@@ -147,6 +186,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        //super.onCreate(savedInstanceState);
+
         context = getApplicationContext();
         Packets = new ArrayList<byte[]>();
         super.onCreate(savedInstanceState);
@@ -258,6 +299,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
+    public void helpClick(View view){
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(R.string.help)
+                .setTitle("Help")
+                .setCancelable(false)
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        //do nothing
+                    }
+                });
+        AlertDialog alert = builder.create();
+        alert.show();
+    }
+
 
     public void stopClick(View view) {
         try {
@@ -303,33 +358,109 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //        builder.create();
 //        builder.show();
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-        builder.setTitle("Send CSV")
-                .setMessage("Do you want to send us the data?")
-                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        new AsyncTask<Void, Void, String>() {
-                            @Override
-                            protected String doInBackground(Void... params) {
-                                try {
-                                    Uri uri = Uri.parse("file://" + path + sampleName + ".csv");
-                                    File sampleFile = new File(uri.getPath());
-                                    GMailSender sender = new GMailSender("wpdapp@gmail.com", "technion123456789");
-                                    sender.sendMail(sampleName,
-                                            "",
-                                            "wpdapp@gmail.com",
-                                            "wpdapp@gmail.com", sampleFile);
-                                } catch (Exception e) {
-                                    Log.e("SendMail", e.getMessage(), e);
-                                }
-                                return null;
-                            }
-                        }.execute(null,null,null);
-                        Toast.makeText(context,"The data was sent, thanks!",Toast.LENGTH_SHORT).show();
-                    }});
-        builder.setNegativeButton("NO", null);
-        builder.create();
+
+        CharSequence sendOptions[] = new CharSequence[] {"Send to Prof. Hoffman ", "Send To Someone Else", "Nothing"};
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("What do you want to do with the data?");
+        builder.setItems(sendOptions, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                switch (which){
+                    case 0:
+//                           new AsyncTask<Void, Void, String>() {
+//                            @Override
+//                            protected String doInBackground(Void... params) {
+//                                try {
+//                                    Uri uri = Uri.parse("file://" + path + sampleName + ".csv");
+//                                    File sampleFile = new File(uri.getPath());
+//                                    GMailSender sender = new GMailSender("wpdapp@gmail.com", "technion1234567890");
+//                                    sender.sendMail(sampleName,
+//                                            "",
+//                                            "wpdapp@gmail.com",
+//                                            "wpdapp@gmail.com", sampleFile);
+//                                } catch (Exception e) {
+//                                    Log.e("SendMail", e.getMessage(), e);
+//                                }
+//                                return null;
+//                            }
+//                        }.execute(null,null,null);
+//                        Toast.makeText(context,"The data was sent, thanks!",Toast.LENGTH_SHORT).show();
+                        Intent emailIntent1 = new Intent(Intent.ACTION_SEND);
+                        emailIntent1.setData(Uri.parse("mailto:"));
+                        emailIntent1.setType("text/plain");
+                        emailIntent1.putExtra(Intent.EXTRA_EMAIL, new String[] {"ahofman@rambam.health.gov.il"});
+                        emailIntent1.putExtra(Intent.EXTRA_SUBJECT, sampleName );
+                        Uri uri = Uri.parse("file://" + path + sampleName + ".csv");
+                        emailIntent1.putExtra(Intent.EXTRA_STREAM, uri);
+                        try {
+                            startActivity(Intent.createChooser(emailIntent1, "Send mail..."));
+                            //startService(emailIntent);
+
+                        } catch (ActivityNotFoundException ex) {
+                            Toast.makeText(MainActivity.this,
+                                    "There is no email client installed.", Toast.LENGTH_SHORT).show();
+                        }
+
+                        break;
+
+                    case 1:
+                        Intent emailIntent = new Intent(Intent.ACTION_SEND);
+                        emailIntent.setData(Uri.parse("mailto:"));
+                        emailIntent.setType("text/plain");
+                        emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[] {""});
+                        emailIntent.putExtra(Intent.EXTRA_SUBJECT, sampleName );
+                        Uri uri1 = Uri.parse("file://" + path + sampleName + ".csv");
+                        emailIntent.putExtra(Intent.EXTRA_STREAM, uri1);
+                        try {
+                           startActivity(Intent.createChooser(emailIntent, "Send mail..."));
+                            //startService(emailIntent);
+
+                        } catch (ActivityNotFoundException ex) {
+                            Toast.makeText(MainActivity.this,
+                                    "There is no email client installed.", Toast.LENGTH_SHORT).show();
+                        }
+                        break;
+
+                    case 2:Toast.makeText(context,"The file is located in the WPD folder in your device",Toast.LENGTH_SHORT).show();
+                        break;
+
+                    default:
+                        Toast.makeText(context,"No option has been chosen",Toast.LENGTH_SHORT).show();
+                        break;
+
+                }
+            }
+        });
         builder.show();
+
+//        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+//        builder.setTitle("Send CSV")
+//                .setMessage("Do you want to send us the data?")
+//                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+//                    public void onClick(DialogInterface dialog, int id) {
+//                        new AsyncTask<Void, Void, String>() {
+//                            @Override
+//                            protected String doInBackground(Void... params) {
+//                                try {
+//                                    Uri uri = Uri.parse("file://" + path + sampleName + ".csv");
+//                                    File sampleFile = new File(uri.getPath());
+//                                    GMailSender sender = new GMailSender("wpdapp@gmail.com", "technion123456789");
+//                                    sender.sendMail(sampleName,
+//                                            "",
+//                                            "wpdapp@gmail.com",
+//                                            "wpdapp@gmail.com", sampleFile);
+//                                } catch (Exception e) {
+//                                    Log.e("SendMail", e.getMessage(), e);
+//                                }
+//                                return null;
+//                            }
+//                        }.execute(null,null,null);
+//                        Toast.makeText(context,"The data was sent, thanks!",Toast.LENGTH_SHORT).show();
+//                    }});
+//        builder.setNegativeButton("NO", null);
+//        builder.create();
+//        builder.show();
         firstTimeInPacketAdd = true;
 
 
@@ -552,5 +683,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             //Toast.makeText(activity, e.getMessage() ,Toast.LENGTH_SHORT).show();
             e.printStackTrace();
         }
+    }
+
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+    @Override
+    public void onBackPressed() {
+        this.finishAffinity();
     }
 }

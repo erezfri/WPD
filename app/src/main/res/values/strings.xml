@@ -1,4 +1,25 @@
 <resources>
     <string name="app_name">Walking Pattern Detector</string>
     <string name="action_settings">Settings</string>
+    <string name="disclaimer">
+        Copyright: Users are free to download and use this mobile app for informational, recreational, educational and research purposes. All rights reserved. May not be used or reproduced without permission by owners.
+        Legal Disclaimer: The information provided by this app is not a substitute for professional medical care. If you have any concerns about your health or medication you should consult your doctor. This app is intended for informational, recreational, educational and research purposes only. It is not for use in the formal diagnosis of disease or other conditions, or in the cure, treatment, or prevention of disease. Health care providers are responsible to exercise their own independent clinical judgment when using the mobile app in conjunction with patient care. Privacy of the user and his data will be maintained.
+        Terms of Use: This mobile app is provided for informational, recreational, educational and research purposes only. Use of the material for any other purpose constitutes infringement of the copyright and intellectual property rights owned by the specific owners for the app. By using any of this material, you assume all risks of copyright infringement and related liability. This app and its content may not be reproduced or used for unauthorized purposes without prior written permission, which may be obtained by submitting a written request to: Prof. Aaron Hoffman, Rambam Medical Center, Haifa, Israel,  email:ahofman@rambam.health.gov.il. Note: this mobile app may contain copyrighted work created under contract with government agencies, foundations, funding organizations and commercial companies, etc. If the app owners place further restrictions on the material, you must honor those restrictions regardless of whether such restrictions are described in this mobile app.
+</string>
+    <string name="help">
+"Introduction: This App may help in various gait problems. It will record your walking pattern for analysis and interpretation.
+
+In some conditions like Intermittent Claudication, Limping, Spinal Stenosis,Neurological Problems, etc. typical walking patterns are recorded.
+These patterns may be analyzed by the user for self diagnosis, follow up,presentation to a doctor, telemedicine, and to asses effect of treatment, and more.
+The data may be sent by the user for interpretation by the developer, and for research.
+
+How to use: Prepare for a 10 minute undisturbed walk on a flat surface. Click the WPD Icon to open it.
+Press the green START sign and put the phone in your pocket. Walk fast for 10 minutes. If you must - stop. Resume walking when you can.
+The App will ask what you want to do with the Data, after 10 minutes. Choose NOTHING if you don't want to send data. The data file will be stored on your device.
+Chose SEND TO PROF. HOFFMAN if you want his interpretation. Choose SEND TO SOMEONE ELSE if you want to send the data to another Specialist, your Doctor, or a friend.
+If you want to see your Pattern open the WPD folder and sent the file to your computer. The CSV file can be opened by Excel or a similar program.
+Add a scatter graph. Large movements values represent walking, small or no movements show stops.
+This is typical for Vascular Intermittent Claudication. Other gait problems will show up differently. Normal Walking Pattern will show no stops.
+This graph can be printed and sent or presented to a doctor."
+    </string>
 </resources>
