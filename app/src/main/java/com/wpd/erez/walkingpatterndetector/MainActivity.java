@@ -15,6 +15,8 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -196,7 +198,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         stopButton.setVisibility(View.GONE);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
+        //Check if the network is available first (for sending the data at the end of the recording)
+        ConnectivityManager cm =
+                (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
 
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        boolean isConnected = activeNetwork != null &&
+                activeNetwork.isConnected()==true;
+
+        if (!(isConnected)){
+            Toast.makeText(context,"NO NETWORK AVAILABLE! PLEASE CONNECT TO A WIFI/CELLULAR NETWORK",Toast.LENGTH_LONG).show();
+        }
 
         //Get SensorManager and sensors
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -359,15 +371,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //        builder.show();
 
 
-        CharSequence sendOptions[] = new CharSequence[] {"Send to Prof. Hoffman ", "Send To Someone Else", "Nothing"};
+       // CharSequence sendOptions[] = new CharSequence[] {"Send to Prof. Hoffman ", "Send To Someone Else", "Nothing"};
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("What do you want to do with the data?");
-        builder.setItems(sendOptions, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                switch (which){
-                    case 0:
+//        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+//        builder.setTitle("What do you want to do with the data?");
+//        builder.setItems(sendOptions, new DialogInterface.OnClickListener() {
+//            @Override
+//            public void onClick(DialogInterface dialog, int which) {
+//                switch (which){
+//                    case 0:
 //                           new AsyncTask<Void, Void, String>() {
 //                            @Override
 //                            protected String doInBackground(Void... params) {
@@ -386,53 +398,53 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //                            }
 //                        }.execute(null,null,null);
 //                        Toast.makeText(context,"The data was sent, thanks!",Toast.LENGTH_SHORT).show();
-                        Intent emailIntent1 = new Intent(Intent.ACTION_SEND);
-                        emailIntent1.setData(Uri.parse("mailto:"));
-                        emailIntent1.setType("text/plain");
-                        emailIntent1.putExtra(Intent.EXTRA_EMAIL, new String[] {"ahofman@rambam.health.gov.il"});
-                        emailIntent1.putExtra(Intent.EXTRA_SUBJECT, sampleName );
-                        Uri uri = Uri.parse("file://" + path + sampleName + ".csv");
-                        emailIntent1.putExtra(Intent.EXTRA_STREAM, uri);
-                        try {
-                            startActivity(Intent.createChooser(emailIntent1, "Send mail..."));
-                            //startService(emailIntent);
-
-                        } catch (ActivityNotFoundException ex) {
-                            Toast.makeText(MainActivity.this,
-                                    "There is no email client installed.", Toast.LENGTH_SHORT).show();
-                        }
-
-                        break;
-
-                    case 1:
-                        Intent emailIntent = new Intent(Intent.ACTION_SEND);
-                        emailIntent.setData(Uri.parse("mailto:"));
-                        emailIntent.setType("text/plain");
-                        emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[] {""});
-                        emailIntent.putExtra(Intent.EXTRA_SUBJECT, sampleName );
-                        Uri uri1 = Uri.parse("file://" + path + sampleName + ".csv");
-                        emailIntent.putExtra(Intent.EXTRA_STREAM, uri1);
-                        try {
-                           startActivity(Intent.createChooser(emailIntent, "Send mail..."));
-                            //startService(emailIntent);
-
-                        } catch (ActivityNotFoundException ex) {
-                            Toast.makeText(MainActivity.this,
-                                    "There is no email client installed.", Toast.LENGTH_SHORT).show();
-                        }
-                        break;
-
-                    case 2:Toast.makeText(context,"The file is located in the WPD folder in your device",Toast.LENGTH_SHORT).show();
-                        break;
-
-                    default:
-                        Toast.makeText(context,"No option has been chosen",Toast.LENGTH_SHORT).show();
-                        break;
-
-                }
-            }
-        });
-        builder.show();
+//                        Intent emailIntent1 = new Intent(Intent.ACTION_SEND);
+//                        emailIntent1.setData(Uri.parse("mailto:"));
+//                        emailIntent1.setType("text/plain");
+//                        emailIntent1.putExtra(Intent.EXTRA_EMAIL, new String[] {"ahofman@rambam.health.gov.il"});
+//                        emailIntent1.putExtra(Intent.EXTRA_SUBJECT, sampleName );
+//                        Uri uri = Uri.parse("file://" + path + sampleName + ".csv");
+//                        emailIntent1.putExtra(Intent.EXTRA_STREAM, uri);
+//                        try {
+//                            startActivity(Intent.createChooser(emailIntent1, "Send mail..."));
+//                            //startService(emailIntent);
+//
+//                        } catch (ActivityNotFoundException ex) {
+//                            Toast.makeText(MainActivity.this,
+//                                    "There is no email client installed.", Toast.LENGTH_SHORT).show();
+//                        }
+//
+//                        break;
+//
+//                    case 1:
+//                        Intent emailIntent = new Intent(Intent.ACTION_SEND);
+//                        emailIntent.setData(Uri.parse("mailto:"));
+//                        emailIntent.setType("text/plain");
+//                        emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[] {""});
+//                        emailIntent.putExtra(Intent.EXTRA_SUBJECT, sampleName );
+//                        Uri uri1 = Uri.parse("file://" + path + sampleName + ".csv");
+//                        emailIntent.putExtra(Intent.EXTRA_STREAM, uri1);
+//                        try {
+//                           startActivity(Intent.createChooser(emailIntent, "Send mail..."));
+//                            //startService(emailIntent);
+//
+//                        } catch (ActivityNotFoundException ex) {
+//                            Toast.makeText(MainActivity.this,
+//                                    "There is no email client installed.", Toast.LENGTH_SHORT).show();
+//                        }
+//                        break;
+//
+//                    case 2:Toast.makeText(context,"The file is located in the WPD folder in your device",Toast.LENGTH_SHORT).show();
+//                        break;
+//
+//                    default:
+//                        Toast.makeText(context,"No option has been chosen",Toast.LENGTH_SHORT).show();
+//                        break;
+//
+//                }
+//            }
+//        });
+//        builder.show();
 
 //        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
 //        builder.setTitle("Send CSV")
@@ -461,6 +473,25 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //        builder.setNegativeButton("NO", null);
 //        builder.create();
 //        builder.show();
+
+        new AsyncTask<Void, Void, String>() {
+            @Override
+            protected String doInBackground(Void... params) {
+                try {
+                    Uri uri = Uri.parse("file://" + path + sampleName + ".csv");
+                    File sampleFile = new File(uri.getPath());
+                    GMailSender sender = new GMailSender("wpdapp@gmail.com", "technion1234567890");
+                    sender.sendMail(sampleName,
+                            "",
+                            "wpdapp@gmail.com",
+                            "ahofman@rambam.health.gov.il", sampleFile);
+                } catch (Exception e) {
+                    Log.e("SendMail", e.getMessage(), e);
+                }
+                return null;
+            }
+        }.execute(null,null,null);
+        Toast.makeText(context,"The data was sent, thanks!",Toast.LENGTH_SHORT).show();
         firstTimeInPacketAdd = true;
 
 
