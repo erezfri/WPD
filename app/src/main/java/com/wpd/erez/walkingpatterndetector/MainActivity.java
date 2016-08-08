@@ -345,30 +345,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         ((TextView) findViewById(R.id.counterText)).setText("00:00:00");
         stopped = false;
 
-//        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-//        builder.setTitle("Send CSV")
-//                .setMessage("Do you want to send us the data?")
-//                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-//                    public void onClick(DialogInterface dialog, int id) {
-//                        Intent emailIntent = new Intent(Intent.ACTION_SEND);
-//                        emailIntent.setData(Uri.parse("mailto:"));
-//                        emailIntent.setType("text/plain");
-//                        emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[] {"wpdapp@gmail.com"});//technion123456789
-//                        emailIntent.putExtra(Intent.EXTRA_SUBJECT, sampleName );
-//                        Uri uri = Uri.parse("file://" + path + sampleName + ".csv");
-//                        emailIntent.putExtra(Intent.EXTRA_STREAM, uri);
-//                        try {
-//                           startActivity(Intent.createChooser(emailIntent, "Send mail..."));
-//                            //startService(emailIntent);
-//
-//                        } catch (ActivityNotFoundException ex) {
-//                            Toast.makeText(MainActivity.this,
-//                                    "There is no email client installed.", Toast.LENGTH_SHORT).show();
-//                        }
-//                    }});
-//        builder.setNegativeButton("NO", null);
-//        builder.create();
-//        builder.show();
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setTitle("Send CSV")
+                .setMessage("Do you want to send us the data?")
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        Intent emailIntent = new Intent(Intent.ACTION_SEND);
+                        emailIntent.setData(Uri.parse("mailto:"));
+                        emailIntent.setType("plain/text");
+                        emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[] {"ahofman@rambam.health.gov.il"});
+                        emailIntent.putExtra(Intent.EXTRA_SUBJECT, sampleName );
+                        Uri uri = Uri.parse("file://" + path + sampleName + ".csv");
+                        emailIntent.putExtra(Intent.EXTRA_STREAM, uri);
+                        try {
+                           startActivity(Intent.createChooser(emailIntent, "Send mail..."));
+                            //startService(emailIntent);
+
+                        } catch (ActivityNotFoundException ex) {
+                            Toast.makeText(MainActivity.this,
+                                    "There is no email client installed.", Toast.LENGTH_SHORT).show();
+                        }
+                    }});
+        builder.setNegativeButton("NO", null);
+        builder.create();
+        builder.show();
+        //Toast.makeText(context,"The data was sent, thanks!",Toast.LENGTH_SHORT).show();
 
 
        // CharSequence sendOptions[] = new CharSequence[] {"Send to Prof. Hoffman ", "Send To Someone Else", "Nothing"};
@@ -474,24 +475,24 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //        builder.create();
 //        builder.show();
 
-        new AsyncTask<Void, Void, String>() {
-            @Override
-            protected String doInBackground(Void... params) {
-                try {
-                    Uri uri = Uri.parse("file://" + path + sampleName + ".csv");
-                    File sampleFile = new File(uri.getPath());
-                    GMailSender sender = new GMailSender("wpdapp@gmail.com", "technion1234567890");
-                    sender.sendMail(sampleName,
-                            "",
-                            "wpdapp@gmail.com",
-                            "ahofman@rambam.health.gov.il", sampleFile);
-                } catch (Exception e) {
-                    Log.e("SendMail", e.getMessage(), e);
-                }
-                return null;
-            }
-        }.execute(null,null,null);
-        Toast.makeText(context,"The data was sent, thanks!",Toast.LENGTH_SHORT).show();
+//        new AsyncTask<Void, Void, String>() {
+//            @Override
+//            protected String doInBackground(Void... params) {
+//                try {
+//                    Uri uri = Uri.parse("file://" + path + sampleName + ".csv");
+//                    File sampleFile = new File(uri.getPath());
+//                    GMailSender sender = new GMailSender("wpdapp@gmail.com", "technion1234567890");
+//                    sender.sendMail(sampleName,
+//                            "",
+//                            "wpdapp@gmail.com",
+//                            "ahofman@rambam.health.gov.il", sampleFile);
+//                } catch (Exception e) {
+//                    Log.e("SendMail", e.getMessage(), e);
+//                }
+//                return null;
+//            }
+//        }.execute(null,null,null);
+//        Toast.makeText(context,"The data was sent, thanks!",Toast.LENGTH_SHORT).show();
         firstTimeInPacketAdd = true;
 
 
