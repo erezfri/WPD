@@ -25,6 +25,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -46,6 +47,9 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+
+import static android.hardware.SensorManager.SENSOR_DELAY_GAME;
+import static android.hardware.SensorManager.SENSOR_DELAY_UI;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
@@ -184,8 +188,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     TextView sensorType;
 
-    int rowsCounter;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         //super.onCreate(savedInstanceState);
@@ -294,13 +296,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void registerSensorListener() {
         // register to SensorEventListener
         for (int i = 0; i < mSensorNum; i++) {
-            mSensorManager.registerListener(this, mSensorGroup.get(i), 30000); //30000 because it will get us 30 samples in 1 seconds
+            mSensorManager.registerListener(this, mSensorGroup.get(i), SENSOR_DELAY_GAME); //30000 because it will get us 30 samples in 1 seconds
+                                                                        //=20000
         }
 
     }
 
     public void startClick(View view) {
-        rowsCounter=0;
+        if ( ContextCompat.checkSelfPermission( this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE ) != PackageManager.PERMISSION_GRANTED )
+        {
+            Toast.makeText(context,"You don't have permission to write with this app, please add permission and try again",Toast.LENGTH_SHORT).show();
+            return;
+        }
         showStopButton();
         if (stopped) {
             startTime = System.currentTimeMillis();// - elapsedTime;
@@ -443,10 +450,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     case 1:
                        Intent emailIntent2 = new Intent(Intent.ACTION_SEND);
                         emailIntent2.setData(Uri.parse("mailto:"));
-                        emailIntent2.setType("text/plain");
+                        emailIntent2.setType("plain/text");
                         emailIntent2.putExtra(Intent.EXTRA_EMAIL, new String[] {""});
                         emailIntent2.putExtra(Intent.EXTRA_SUBJECT, sampleName );
-                       Uri uri1 = Uri.parse("file://" + path + sampleName + ".csv");
+                        Uri uri1 = Uri.parse("file://" + path + sampleName + ".csv");
                         emailIntent2.putExtra(Intent.EXTRA_STREAM, uri1);
                        try {
                           startActivity(Intent.createChooser(emailIntent2, "Send mail..."));
@@ -664,9 +671,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mPosition[i] = mPosition[i] + mSampByteNum;
         mSampCount[i]++;
 
-
-        rowsCounter++;//for checking whether the maximum rows achieved
-        if (rowsCounter == 19500){//for checking whether the maximum rows achieved (~10 minutes of testing)
+        if (mins>9){
             Button stopButton;
 
             stopButton = (Button) findViewById(R.id.stopButton);
@@ -703,6 +708,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (requestCode == 112) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 //permission granted  start reading
+
             } else {
                 Toast.makeText(this, "No permission to read external storage.", Toast.LENGTH_SHORT).show();
             }
