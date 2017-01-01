@@ -23,6 +23,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.PowerManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -188,6 +189,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     TextView sensorType;
 
+    //keep active while sleep mode is on
+    PowerManager pm;
+    PowerManager.WakeLock wl;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         //super.onCreate(savedInstanceState);
@@ -199,6 +204,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Button stopButton = (Button) findViewById(R.id.stopButton);
         stopButton.setVisibility(View.GONE);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+
+        //for sleep mode
+        pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "My Tag");
+
 
         //Check if the network is available first (for sending the data at the end of the recording)
         ConnectivityManager cm =
@@ -289,7 +299,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     protected void onPause() {
 
-        mSensorManager.unregisterListener(this);
+        //mSensorManager.unregisterListener(this);
         super.onStop();
     }
 
@@ -322,6 +332,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         sensorHandler.removeCallbacks(startSensorDetection);
         sensorHandler.postDelayed(startSensorDetection, 0);
 
+        //for sleep mode
+        wl.acquire();
+
     }
 
     public void helpClick(View view){
@@ -345,6 +358,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         } catch (Exception e) {
         }
         final String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/WPD/";
+        //for sleep mode
+        wl.release();
 
         //Packets2File(Packets);
         try {

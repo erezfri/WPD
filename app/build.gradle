@@ -17,8 +17,8 @@ android {
         applicationId "com.wpd.erez.walkingpatterndetector"
         minSdkVersion 16
         targetSdkVersion 23
-        versionCode 7
-        versionName "7"
+        versionCode 8
+        versionName "8"
     }
     buildTypes {
         release {
